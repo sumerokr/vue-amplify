@@ -1,5 +1,10 @@
 <template>
   <div id="app">
+    <amplify-authenticator>
+      <!-- The rest of your app code -->
+      <amplify-sign-out></amplify-sign-out>
+    </amplify-authenticator>
+
     <h1>Todo App</h1>
     <input type="text" v-model="name" placeholder="Todo name" />
     <input type="text" v-model="description" placeholder="Todo description" />
@@ -16,6 +21,8 @@
 import { API } from "aws-amplify";
 import { createTodo } from "./graphql/mutations";
 import { listTodos } from "./graphql/queries";
+import { onCreateTodo } from "./graphql/subscriptions";
+
 
 export default {
   name: "App",
@@ -23,7 +30,7 @@ export default {
     return {
       name: "",
       description: "",
-      todos: []
+      todos: [],
     };
   },
   methods: {
@@ -44,9 +51,19 @@ export default {
       });
       this.todos = todos.data.listTodos.items;
     },
+    subscribe() {
+      API.graphql({ query: onCreateTodo }).subscribe({
+        next: (eventData) => {
+          let todo = eventData.value.data.onCreateTodo;
+          if (this.todos.some((item) => item.name === todo.name)) return; // remove duplications
+          this.todos = [...this.todos, todo];
+        },
+      });
+    },
   },
   async created() {
     this.getTodos();
+    this.subscribe();
   },
 };
 </script>
